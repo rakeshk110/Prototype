@@ -1,8 +1,0 @@
-fastapi
-uvicorn[standard]
-ultralytics
-numpy
-opencv-python
-pandas
-python-multipart
-
