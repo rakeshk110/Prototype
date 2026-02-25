@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Vehicle Verification System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Optional Google Font for a modern look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ---------- HEADER ---------- -->
+    <header class="app-header">
+      <div class="app-header-topline">
+        <div class="app-title-block">
+          <h1>
+            AI Vehicle Verification System
+            <span class="badge-live">
+              <span class="badge-dot"></span>
+              LIVE MONITOR
+            </span>
+          </h1>
+          <p class="app-subtitle">
+            Upload traffic camera frames and verify vehicles against watchlists in real time.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ---------- MAIN GRID ---------- -->
+    <main class="main-grid">
+      <!-- ---------- LEFT: Upload & Controls ---------- -->
+      <section class="card" aria-label="Upload image for vehicle verification">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <span class="card-title-icon">📥</span>
+              Input Image
+            </div>
+            <p class="card-subtitle">Select a traffic frame, preview it, and start analysis.</p>
+          </div>
+        </div>
+
+        <div class="upload-card-body">
+          <!-- File input + preview -->
+          <div class="upload-row">
+            <div class="file-input-wrapper">
+              <div class="file-input-row">
+                <span class="file-label">Traffic Image</span>
+                <div class="file-input">
+                  <button class="btn secondary" type="button">
+                    Choose Image
+                  </button>
+                  <!-- Hidden native file input used to actually pick the file -->
+                  <input
+                    id="fileInput"
+                    type="file"
+                    accept="image/*"
+                    aria-label="Upload traffic image"
+                  />
+                </div>
+              </div>
+              <div class="file-name-display" id="fileNameDisplay">
+                No file selected
+              </div>
+              <div class="file-hint">
+                • Accepted: JPEG, PNG · Ideal resolution ≥ 720p
+              </div>
+            </div>
+
+            <!-- Upload preview box -->
+            <div class="preview-box" id="uploadPreviewBox">
+              <div class="preview-placeholder" id="uploadPlaceholder">
+                <strong>No image selected.</strong><br />
+                Choose a traffic still from your local drive.<br />
+                Vehicles will be detected and classified automatically.
+              </div>
+              <img
+                id="uploadPreviewImage"
+                class="preview-image"
+                alt="Preview of uploaded traffic image"
+              />
+            </div>
+          </div>
+
+          <!-- Actions + Status line -->
+          <div style="display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+            <button id="processButton" class="btn disabled" type="button" disabled>
+              ▶ Process Image
+            </button>
+
+            <div class="status-strip" aria-live="polite">
+              <div class="status-indicator">
+                <span class="status-indicator-dot"></span>
+                <span style="font-size: 0.75rem;">System ready</span>
+              </div>
+              <span id="statusMessage" class="status-message">
+                Waiting for image upload.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- RIGHT: Summary & Result Image ---------- -->
+      <section class="card" aria-label="Detection results and summary">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <span class="card-title-icon">📊</span>
+              Detection Summary
+            </div>
+            <p class="card-subtitle">
+              AI-generated overview of vehicles found in the current frame.
+            </p>
+          </div>
+        </div>
+
+        <!-- Metric cards -->
+        <div class="metrics-row" aria-label="Vehicle detection counters">
+          <div class="metric-card">
+            <span class="metric-label">Total Vehicles</span>
+            <span id="totalCount" class="metric-value">0</span>
+            <span class="metric-caption">All vehicles in current frame</span>
+          </div>
+          <div class="metric-card match">
+            <span class="metric-label">Matches</span>
+            <span id="matchCount" class="metric-value">0</span>
+            <span class="metric-caption">Verified against whitelist</span>
+          </div>
+          <div class="metric-card mismatch">
+            <span class="metric-label">Mismatches</span>
+            <span id="mismatchCount" class="metric-value">0</span>
+            <span class="metric-caption">Flagged for manual review</span>
+          </div>
+        </div>
+
+        <!-- Alert banner (brief inline notice) -->
+        <div id="mismatchAlert" class="alert-banner" role="alert">
+          <div class="alert-icon">!</div>
+          <div>
+            <span class="alert-text-strong">Mismatch detected</span>
+            <span>Some vehicles did not match the expected records.</span>
+            <span class="alert-link" id="viewDetailsLink">View flagged vehicles</span>
+          </div>
+        </div>
+
+        <!-- Result image + loader -->
+        <div class="result-content">
+          <div class="result-image-wrapper">
+            <!-- Loader shown while waiting for backend -->
+            <div class="loader-overlay" id="loaderOverlay">
+              <div class="loader-spinner"></div>
+              <div class="loader-text">Running vehicle verification…</div>
+            </div>
+
+            <!-- Processed image -->
+            <img
+              id="resultImage"
+              class="result-image"
+              alt="Processed traffic image with vehicle detections"
+            />
+
+            <!-- Placeholder before we have any result -->
+            <div id="resultPlaceholder" class="result-placeholder">
+              Processed image will appear here once analysis completes.<br />
+              Bounding boxes and labels are drawn by the backend.
+            </div>
+          </div>
+
+          <div class="legend-row">
+            <div class="legend">
+              <span class="legend-item">
+                <span class="legend-badge match"></span>
+                MATCH vehicle
+              </span>
+              <span class="legend-item">
+                <span class="legend-badge mismatch"></span>
+                MISMATCH vehicle
+              </span>
+            </div>
+            <div class="timestamp" id="timestampLabel">
+              Last scan: — 
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ---------- VEHICLE DETAILS TABLE ---------- -->
+    <section class="card" aria-label="Per-vehicle details">
+      <div class="card-header">
+        <div>
+          <div class="card-title">
+            <span class="card-title-icon">🚓</span>
+            Vehicle Details
+          </div>
+          <p class="card-subtitle">
+            Full breakdown of detected vehicles, including plate number, status and confidence.
+          </p>
+        </div>
+      </div>
+
+      <div class="details-card-body">
+        <div class="table-wrapper" aria-live="polite">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Plate</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Color</th>
+                <th>Confidence</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="vehicleTableBody">
+              <tr>
+                <td colspan="7" class="empty-row">
+                  No vehicles detected yet. Run analysis to populate this table.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------- MODAL: Mismatch Alert Popup ---------- -->
+  <div id="mismatchModalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mismatchModalTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="mismatchModalTitle">
+          <span class="modal-badge">!</span>
+          Mismatch vehicles detected
+        </div>
+        <button class="modal-close-btn" type="button" id="modalCloseButton" aria-label="Close alert">
+          ✕
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>
+          <strong>Warning:</strong> One or more vehicles in the processed frame could not be
+          verified against the expected records or watchlists.
+        </p>
+        <p>
+          Please review the <strong>Vehicle Details</strong> table below the dashboard for
+          highlighted <span style="color:#fecaca;font-weight:600;">MISMATCH</span> entries and
+          take the appropriate action.
+        </p>
+        <p class="modal-note">
+          Tip: Sort or filter by status/plate number in your reporting tools for deeper analysis.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" type="button" id="modalViewTableButton">
+          Scroll to vehicle table
+        </button>
+        <button class="btn" type="button" id="modalOkButton">
+          Acknowledge
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- FOOTER ---------- -->
+  <!-- <footer class="app-footer">
+    <span>AI-based Vehicle Verification · Frontend only (HTML · CSS · JavaScript)</span>
+  </footer> -->
+
+  <!-- ---------- JAVASCRIPT LOGIC (external) ---------- -->
+  <script src="script.js"></script>
+</body>
+</html>
+
